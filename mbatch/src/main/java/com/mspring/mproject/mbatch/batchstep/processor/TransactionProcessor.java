@@ -3,9 +3,11 @@ package com.mspring.mproject.mbatch.batchstep.processor;
 import com.mspring.mproject.mbatch.model.entity.TransactionRecord;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.context.annotation.Bean;
+import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
+@Component
 public class TransactionProcessor implements ItemProcessor<TransactionRecord, TransactionRecord> {
 
     @Override

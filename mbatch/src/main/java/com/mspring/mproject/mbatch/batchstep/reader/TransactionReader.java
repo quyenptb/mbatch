@@ -6,9 +6,16 @@ import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+@Component
 @Configuration
 public class TransactionReader {
 
@@ -39,6 +46,9 @@ public class TransactionReader {
         );
         lineTokenizer.setStrict(false);
 
+        DateTimeFormatter transactionFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        DateTimeFormatter processedFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
+
         // Mapper: ánh xạ dòng CSV → TransactionRecord
         FieldSetMapper<TransactionRecord> fieldSetMapper = fieldSet -> {
             TransactionRecord tr = new TransactionRecord();
@@ -52,11 +62,11 @@ public class TransactionReader {
             tr.setInvestmentAmount(fieldSet.readBigDecimal("Investment_Amount"));
             tr.setInvestmentType(fieldSet.readString("Investment_Type"));
             tr.setIsAnomaly(fieldSet.readInt("Is_Anomaly") == 1);
-            tr.setTransactionDate(fieldSet.readDate("Transaction_Date", "yyyy-MM-dd"));
+            tr.setTransactionDate(LocalDate.parse(fieldSet.readString("Transaction_Date"), transactionFormatter));
+            tr.setProcessedAt(LocalDateTime.parse(fieldSet.readString("Processed_At"), processedFormatter));
             tr.setYear(fieldSet.readInt("Year"));
             tr.setMonth(fieldSet.readInt("Month"));
             tr.setDay(fieldSet.readInt("Day"));
-            tr.setProcessedAt(fieldSet.readDate("Processed_At", "yyyy-MM-dd HH:mm:ss"));
             return tr;
         };
 

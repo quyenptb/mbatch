@@ -4,12 +4,15 @@ import com.mspring.mproject.mbatch.batchstep.processor.TransactionProcessor;
 import com.mspring.mproject.mbatch.batchstep.reader.TransactionReader;
 import com.mspring.mproject.mbatch.batchstep.writer.TransactionWriter;
 import com.mspring.mproject.mbatch.model.entity.TransactionRecord;
-import com.mspring.mproject.mbatch.repository.TransactionResitory;
+import com.mspring.mproject.mbatch.repository.TransactionRespoitory;
+import com.mspring.mproject.mbatch.repository.TransactionRespoitory;
 import lombok.AllArgsConstructor;
+import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.explore.support.JobExplorerFactoryBean;
+import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -32,7 +35,7 @@ public class BatchConfig {
     private final TransactionReader reader;
     private final TransactionProcessor processor;
     private final TransactionWriter writer;
-    private final TransactionResitory repository;
+    private final TransactionRespoitory repository;
 
 
     @Bean
@@ -91,8 +94,15 @@ public class BatchConfig {
         return new StepBuilder("processOrdersStep", jobRepository)
                 .<TransactionRecord, TransactionRecord>chunk(1000, txManager)
                 .reader(reader.transactionReader())
-                .processor(new TransactionProcessor())
-                .writer(new TransactionWriter(repository))
+                .processor(processor)
+                .writer(writer)
+                .build();
+    }
+
+    @Bean
+    public Job processTransactionJob(JobRepository jobRepository, Step processTransactionStep) {
+        return new JobBuilder("processTransactionJob", jobRepository).flow(processTransactionStep)
+                .end()
                 .build();
     }
 

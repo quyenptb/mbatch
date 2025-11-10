@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 
@@ -26,9 +27,9 @@ public class TransactionRecord {
     private BigDecimal investmentAmount;
     private String investmentType;
     private Boolean isAnomaly;
-    private Date transactionDate;
+    private LocalDate transactionDate;
     private Integer year;
     private Integer month;
     private Integer day;
-    private Date processedAt;
+    private LocalDateTime processedAt;
 }
