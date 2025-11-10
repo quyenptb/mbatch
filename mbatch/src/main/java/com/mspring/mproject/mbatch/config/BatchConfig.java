@@ -47,9 +47,9 @@ public class BatchConfig {
     public DataSource dataSource() {
         return DataSourceBuilder.create()
                 .driverClassName("oracle.jdbc.OracleDriver")
-                .url("jdbc:oracle:thin:@localhost:1521:xe")
-                .username("your_username")
-                .password("your_password")
+                .url("jdbc:oracle:thin:@localhost:1521/orcl21pdb1")
+                .username("C##mbatch_user")
+                .password("123")
                 .build();
     }
 
@@ -104,7 +104,7 @@ public class BatchConfig {
                 .build();
     }
 
-    @Bean
+    @Bean(name = "transactionProcessingJob")
     public Job processTransactionJob(JobRepository jobRepository, Step processTransactionStep) {
         return new JobBuilder("processTransactionJob", jobRepository).flow(processTransactionStep)
                 .end()

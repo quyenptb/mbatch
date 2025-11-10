@@ -20,10 +20,6 @@ public class TransactionWriter implements ItemWriter<TransactionRecord> {
     @Lazy
     private TransactionRespoitory transactionRepository;
 
-    public TransactionWriter(TransactionRespoitory repository) {
-        this.transactionRepository = repository;
-    }
-
     @Override
     public void write(Chunk<? extends TransactionRecord> items) throws Exception {
         transactionRepository.saveAll(items);
