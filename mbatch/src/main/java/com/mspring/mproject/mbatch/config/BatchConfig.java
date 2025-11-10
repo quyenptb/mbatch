@@ -16,9 +16,11 @@ import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -29,13 +31,16 @@ import javax.sql.DataSource;
 
 @Configuration
 @EnableBatchProcessing
-@AllArgsConstructor
 public class BatchConfig {
 
-    private final TransactionReader reader;
-    private final TransactionProcessor processor;
-    private final TransactionWriter writer;
-    private final TransactionRespoitory repository;
+    @Autowired
+    private TransactionReader reader;
+
+    @Autowired
+    private TransactionProcessor processor;
+
+    @Autowired
+    private TransactionWriter writer;
 
 
     @Bean

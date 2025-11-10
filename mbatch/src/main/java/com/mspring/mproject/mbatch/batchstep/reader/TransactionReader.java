@@ -15,14 +15,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-@Component
-@Configuration
+@Component("myTransactionReaderComponent")
 public class TransactionReader {
 
-    @Bean
+    @Bean(name = "transactionItemReader")
     public FlatFileItemReader<TransactionRecord> transactionReader() {
         FlatFileItemReader<TransactionRecord> reader = new FlatFileItemReader<>();
-        reader.setResource(new ClassPathResource("excel_transaction_data.csv"));
+        reader.setResource(new ClassPathResource("transaction_data.csv"));
         reader.setLinesToSkip(1); // bỏ header
 
         // Tokenizer: định nghĩa tên cột trong CSV
