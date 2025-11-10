@@ -13,9 +13,10 @@ public class TransactionProcessor implements ItemProcessor<TransactionRecord, Tr
     @Override
     public TransactionRecord process(TransactionRecord item) throws Exception {
         if (item.getUpdatedBalance().compareTo(BigDecimal.ZERO) < 0) {
-            return null;
-            //throw new IllegalArgumentException("Updated balance cannot be negative for Transaction ID: " + item.getTransactionId());
+            //return null;
+            throw new IllegalArgumentException("Updated balance cannot be negative for Transaction ID: " + item.getTransactionId());
         }
+
         if (item.getTransactionAmount().compareTo(item.getTotalBalance().multiply(new BigDecimal("0.5"))) > 0) {
             item.setIsAnomaly(true);
         }

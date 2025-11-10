@@ -1,30 +1,24 @@
 package com.mspring.mproject.mbatch.config;
 
-import com.mspring.mproject.mbatch.batchstep.listener.CustomSkipListener;
 import com.mspring.mproject.mbatch.batchstep.processor.TransactionProcessor;
-import com.mspring.mproject.mbatch.batchstep.reader.TransactionReader;
 import com.mspring.mproject.mbatch.batchstep.writer.TransactionWriter;
 import com.mspring.mproject.mbatch.model.entity.TransactionRecord;
-import com.mspring.mproject.mbatch.repository.TransactionRespoitory;
-import com.mspring.mproject.mbatch.repository.TransactionRespoitory;
-import lombok.AllArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.explore.JobExplorer;
-import org.springframework.batch.core.explore.support.JobExplorerFactoryBean;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
-import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.item.file.FlatFileItemReader;
+import org.springframework.batch.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.item.file.mapping.FieldSetMapper;
+import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -32,13 +26,13 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 
 import javax.sql.DataSource;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Configuration
 //@EnableBatchProcessing
 public class BatchConfig {
-
-    @Autowired
-    private TransactionReader reader;
 
     @Autowired
     private TransactionProcessor processor;
@@ -47,7 +41,7 @@ public class BatchConfig {
     private TransactionWriter writer;
 
     @Autowired
-    private CustomSkipListener customSkipListener;
+    private TransactionSkipListener transactionSkipListener;
 
     /*
     @Bean
@@ -96,6 +90,80 @@ public class BatchConfig {
         return factory.getObject();
     } */
 
+    @Bean(name = "transactionItemReader")
+    @StepScope //StepScope has to be with the Bean
+    public FlatFileItemReader<TransactionRecord> transactionReader(
+            @Value("#{jobParameters['inputFile']}")
+            String inputFile,
+            @Value("#{jobParameters['processingDate']}")
+            String processingDate
+    ) {
+
+        //Transfer String (processingDate parameter above) -> LocalDate (expectedDate)
+        LocalDate expectedDate = LocalDate.parse(processingDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+        FlatFileItemReader<TransactionRecord> reader = new FlatFileItemReader<>();
+        reader.setResource(new ClassPathResource(inputFile));
+        reader.setLinesToSkip(1);
+
+        DelimitedLineTokenizer lineTokenizer = new DelimitedLineTokenizer();
+        lineTokenizer.setNames(
+                "Batch_ID",
+                "Transaction_ID",
+                "Customer_ID",
+                "Account_Type",
+                "Total_Balance",
+                "Transaction_Amount",
+                "Updated_Balance",
+                "Investment_Amount",
+                "Investment_Type",
+                "Is_Anomaly",
+                "Transaction_Date",
+                "Year",
+                "Month",
+                "Day",
+                "Processed_At"
+        );
+        lineTokenizer.setStrict(false);
+
+        DateTimeFormatter transactionFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        DateTimeFormatter processedFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
+
+        FieldSetMapper<TransactionRecord> fieldSetMapper = fieldSet -> {
+
+            LocalDate transactionDate = LocalDate.parse(fieldSet.readString("Transaction_Date"), transactionFormatter);
+
+            if (!transactionDate.equals(expectedDate)) {
+                return null;
+            }
+
+            TransactionRecord tr = new TransactionRecord();
+            tr.setBatchId(fieldSet.readString("Batch_ID"));
+            tr.setTransactionId(fieldSet.readLong("Transaction_ID"));
+            tr.setCustomerId(fieldSet.readLong("Customer_ID"));
+            tr.setAccountType(fieldSet.readString("Account_Type"));
+            tr.setTotalBalance(fieldSet.readBigDecimal("Total_Balance"));
+            tr.setTransactionAmount(fieldSet.readBigDecimal("Transaction_Amount"));
+            tr.setUpdatedBalance(fieldSet.readBigDecimal("Updated_Balance"));
+            tr.setInvestmentAmount(fieldSet.readBigDecimal("Investment_Amount"));
+            tr.setInvestmentType(fieldSet.readString("Investment_Type"));
+            tr.setIsAnomaly(fieldSet.readInt("Is_Anomaly") == 1);
+            tr.setTransactionDate(transactionDate);
+            tr.setProcessedAt(LocalDateTime.parse(fieldSet.readString("Processed_At"), processedFormatter));
+            tr.setYear(fieldSet.readInt("Year"));
+            tr.setMonth(fieldSet.readInt("Month"));
+            tr.setDay(fieldSet.readInt("Day"));
+            return tr;
+        };
+
+        DefaultLineMapper<TransactionRecord> lineMapper = new DefaultLineMapper<>();
+        lineMapper.setLineTokenizer(lineTokenizer);
+        lineMapper.setFieldSetMapper(fieldSetMapper);
+
+        reader.setLineMapper(lineMapper);
+        return reader;
+    }
+
     @Bean
     public TaskExecutor taskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -108,17 +176,20 @@ public class BatchConfig {
     }
 
     @Bean
-    public Step processTransactionStep(JobRepository jobRepository, PlatformTransactionManager txManager) {
+    public Step processTransactionStep(JobRepository jobRepository, PlatformTransactionManager txManager,
+                                       FlatFileItemReader<TransactionRecord> transactionReader
+                                       ) {
         return new StepBuilder("processOrdersStep", jobRepository)
                 .<TransactionRecord, TransactionRecord>chunk(1000, txManager)
-                .reader(reader.transactionReader())
+                .reader(transactionReader)
                 .processor(processor)
                 .writer(writer)
-                //Che do chiu loi
+                .taskExecutor(taskExecutor())
+                //Fault Tolerant Mode
                 .faultTolerant()
-                .skipLimit(100) //bo toi da 100 loi
+                .skipLimit(200) //bo toi da 200 loi
                 .skip(Exception.class) //ngoai tru Exception thi khong ghi lai
-                .listener(customSkipListener)
+                .listener(transactionSkipListener)
                 .build();
     }
 

@@ -1,7 +1,8 @@
 package com.mspring.mproject.mbatch.batchstep.writer;
 import com.mspring.mproject.mbatch.model.entity.TransactionRecord;
-import com.mspring.mproject.mbatch.repository.TransactionRespoitory;
-import com.mspring.mproject.mbatch.repository.TransactionRespoitory;
+import com.mspring.mproject.mbatch.repository.TransactionRepository;
+
+import com.mspring.mproject.mbatch.repository.TransactionRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
@@ -18,7 +19,7 @@ public class TransactionWriter implements ItemWriter<TransactionRecord> {
 
     @Autowired
     @Lazy
-    private TransactionRespoitory transactionRepository;
+    private TransactionRepository transactionRepository;
 
     @Override
     public void write(Chunk<? extends TransactionRecord> items) throws Exception {

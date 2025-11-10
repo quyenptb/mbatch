@@ -33,16 +33,17 @@ public class BatchController {
     public String startJob() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
         try {
             JobParameters jobParameters = new JobParametersBuilder()
-                    .addLong("startTime", System.currentTimeMillis())
+                    .addString("processingDate", "2025-11-10")
+                    .addString("inputFile", "transaction_data.csv")
                     .toJobParameters();
 
             jobLauncher.run(transactionJob, jobParameters);
 
-            return "Batch job đã được khởi động rồi";
+            return "Done batch job processing";
 
         }
         catch (Exception e) {
-            return "Lỗi xảy ra " + e.getMessage();
+            return "An error has occur " + e.getMessage();
 
         }
 
