@@ -21,8 +21,11 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.datasource.init.DataSourceInitializer;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -30,7 +33,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import javax.sql.DataSource;
 
 @Configuration
-@EnableBatchProcessing
+//@EnableBatchProcessing
 public class BatchConfig {
 
     @Autowired
@@ -42,7 +45,7 @@ public class BatchConfig {
     @Autowired
     private TransactionWriter writer;
 
-
+    /*
     @Bean
     public DataSource dataSource() {
         return DataSourceBuilder.create()
@@ -59,6 +62,9 @@ public class BatchConfig {
         return new DataSourceTransactionManager(dataSource);
     }
 
+     */
+
+    /*
     //Config JobRepository
     @Bean
     public JobRepository jobRepository(DataSource dataSource,
@@ -68,13 +74,15 @@ public class BatchConfig {
         factory.setTransactionManager(txManager);
         factory.setDatabaseType("ORACLE");
         factory.setIsolationLevelForCreate("ISOLATION_SERIALIZABLE");
+        //oracle does not accept too long table name, so i use T_BATCH for all table prefix
+        //factory.setTablePrefix("B_");
         factory.afterPropertiesSet();
         return factory.getObject();
-    }
+    } */
 
     //JobLauncher Spring Boot tự gán
 
-
+    /*
     @Bean
     public JobExplorer jobExplorer(DataSource dataSource, PlatformTransactionManager txManager) throws Exception {
         JobExplorerFactoryBean factory = new JobExplorerFactoryBean();
@@ -82,7 +90,7 @@ public class BatchConfig {
         factory.setTransactionManager(txManager);
         factory.afterPropertiesSet();
         return factory.getObject();
-    }
+    } */
 
     @Bean
     public TaskExecutor taskExecutor() {
@@ -110,6 +118,21 @@ public class BatchConfig {
         return new JobBuilder("processTransactionJob", jobRepository).flow(processTransactionStep)
                 .end()
                 .build();
+    }
+
+
+    @Bean
+    public DataSourceInitializer dataSourceInitializer(DataSource dataSource) {
+        ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
+        // Sử dụng script chuẩn của Spring Batch cho Oracle
+        populator.addScript(new ClassPathResource("org/springframework/batch/core/schema-oracle.sql"));
+
+        populator.setContinueOnError(true); //phòng khi bảng đã tồn tại
+
+        DataSourceInitializer initializer = new DataSourceInitializer();
+        initializer.setDataSource(dataSource);
+        initializer.setDatabasePopulator(populator);
+        return initializer;
     }
 
 
