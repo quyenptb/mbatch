@@ -1,5 +1,6 @@
 package com.mspring.mproject.mbatch.config;
 
+import com.mspring.mproject.mbatch.batchstep.listener.CustomSkipListener;
 import com.mspring.mproject.mbatch.batchstep.processor.TransactionProcessor;
 import com.mspring.mproject.mbatch.batchstep.reader.TransactionReader;
 import com.mspring.mproject.mbatch.batchstep.writer.TransactionWriter;
@@ -44,6 +45,9 @@ public class BatchConfig {
 
     @Autowired
     private TransactionWriter writer;
+
+    @Autowired
+    private CustomSkipListener customSkipListener;
 
     /*
     @Bean
@@ -110,6 +114,11 @@ public class BatchConfig {
                 .reader(reader.transactionReader())
                 .processor(processor)
                 .writer(writer)
+                //Che do chiu loi
+                .faultTolerant()
+                .skipLimit(100) //bo toi da 100 loi
+                .skip(Exception.class) //ngoai tru Exception thi khong ghi lai
+                .listener(customSkipListener)
                 .build();
     }
 
