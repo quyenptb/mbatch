@@ -93,3 +93,19 @@ Run with different processingDate values to simulate:
 - Dirty data days
 
 - Empty input days
+
+### Grafana Dashboard
+
+![EOD Total Job Runs](https://drive.google.com/uc?export=view&id=1GHWACXE0r_B2uHT1wf-IJkdgDcqddHoc)
+
+![Longest Step Runtime](https://drive.google.com/uc?export=view&id=1-E5XZgO5jhoa-XLJKaBCp8-riMTgfyiD)
+
+![Total Job Runtime Overview](https://drive.google.com/uc?export=view&id=1IsINIOQ8KebFhNtieaO2hxnCIQbWPS9O)
+
+![Item Read Processing Time](https://drive.google.com/uc?export=view&id=17hOmZouPdPef9bQkbkIDYN_LobI_Yd5X)
+
+
+
+
+
+
