@@ -5,7 +5,6 @@ import com.mspring.mproject.mbatch.batchstep.writer.TransactionWriter;
 import com.mspring.mproject.mbatch.model.entity.TransactionRecord;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
@@ -38,11 +37,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Configuration
-@EnableBatchProcessing
 public class BatchConfig {
 
     @Autowired
     private TransactionSkipListener transactionSkipListener;
+
+    @Autowired
+    private ReconciliationTasklet reconciliationTasklet;
+
+    @Autowired
+    private BatchMetricsService metricsService;
 
     private static final Logger log = LoggerFactory.getLogger(BatchConfig.class);
 
@@ -102,7 +106,7 @@ public class BatchConfig {
 
     @Bean
     public TransactionWriter transactionWriter() {
-        return new TransactionWriter();
+        return new TransactionWriter(metricsService);
     }
 
 
@@ -188,11 +192,17 @@ public class BatchConfig {
                 .listener(transactionSkipListener)
                 .build();
     }
+    @Bean
+    public Step reconciliationStep(JobRepository jobRepository, PlatformTransactionManager txManager) {
+        return new StepBuilder("reconciliationStep", jobRepository)
+                .tasklet(reconciliationTasklet, txManager)
+                .build();
+    }
 
     @Bean(name = "transactionProcessingJob")
-    public Job processTransactionJob(JobRepository jobRepository, Step processTransactionStep) {
-        return new JobBuilder("processTransactionJob", jobRepository).flow(processTransactionStep)
-                .end()
+    public Job processTransactionJob(JobRepository jobRepository, Step processTransactionStep, Step reconciliationStep) {
+        return new JobBuilder("processTransactionJob", jobRepository).start(processTransactionStep)
+                .next(reconciliationStep)
                 .build();
     }
 
