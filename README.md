@@ -9,7 +9,7 @@ The system handles large-volume banking transactions, applying cleansing, valida
 ---
 
 ## About EOD 
-End-of-Day (EOD) processing is a critical operation in banking, ensuring that all daily transactions are accurately recorded, validated, and persisted for regulatory compliance and financial reporting.
+End-of-Day (EOD) processing is a vital operation within the banking sector, designed to accurately record, validate, and securely store all daily transactions. This comprehensive procedure is essential for maintaining data integrity, facilitating financial reporting, and ensuring adherence to stringent regulatory compliance standards.
 
 ## Monitoring & Observability  
 > **Insight at scale:** A complete metrics pipeline that tracks system health, throughput, and failures.
