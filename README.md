@@ -28,8 +28,8 @@ Dashboards are powered by a **weeklong EOD simulation** with varied data pattern
 | Feature | Description | Example / Notes |
 |---------|-------------|----------------|
 | **Dynamic Job Parameters** | Job parameters (like `processingDate`) are injected via `@JobScope` and `@StepScope`. | ```java @Value("#{jobParameters['processingDate']}") private LocalDate processingDate; ``` |
-| **Reader: Data Cleansing** | Trims text fields and normalizes financial values. | `BigDecimal.setScale(2, RoundingMode.HALF_UP)` |
-| **Processor: Business Validation** | Rejects mismatched dates and applies banking validation rules. Invalid records are skipped. | Returns `null` for invalid records |
+| **Reader Data Cleansing** | Trims text fields and normalizes financial values. | `BigDecimal.setScale(2, RoundingMode.HALF_UP)` |
+| **Processor Business Validation** | Rejects mismatched dates and applies banking validation rules. Invalid records are skipped. | Returns `null` for invalid records |
 | **Fault Tolerance Mechanism** | Handles processor-level business errors and writer-level database exceptions without stopping the job. | Configurable skip logic |
 | **Skip Auditing** | Tracks all skipped records via `TransactionSkipListener` and pushes metrics to Prometheus/Grafana. | Enables full observability of failures |
 | **Automated Scheduling** | Runs EOD batch jobs automatically via a cron trigger. | Supports manual execution through REST endpoints |
@@ -88,8 +88,8 @@ Uncomment the @Scheduled(...) annotation in JobScheduler.java
 
 Run with different processingDate values to simulate:
 
-Clean data days
+- Clean data days
 
-Dirty data days
+- Dirty data days
 
-Empty input days
+- Empty input days
