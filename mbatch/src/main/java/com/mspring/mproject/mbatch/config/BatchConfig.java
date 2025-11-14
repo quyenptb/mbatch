@@ -5,6 +5,7 @@ import com.mspring.mproject.mbatch.batchstep.writer.TransactionWriter;
 import com.mspring.mproject.mbatch.model.entity.TransactionRecord;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
@@ -13,6 +14,7 @@ import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+// import org.springframework.batch.item.support.SynchronizedItemStreamReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -24,26 +26,27 @@ import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
+// import org.springframework.batch.item.support.builder.SynchronizedItemStreamReaderBuilder;
+
 
 import javax.sql.DataSource;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.math.RoundingMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Configuration
-//@EnableBatchProcessing
+@EnableBatchProcessing
 public class BatchConfig {
-
-    @Autowired
-    private TransactionProcessor processor;
-
-    @Autowired
-    private TransactionWriter writer;
 
     @Autowired
     private TransactionSkipListener transactionSkipListener;
 
-    /*
+    private static final Logger log = LoggerFactory.getLogger(BatchConfig.class);
+
+        /*
     @Bean
     public DataSource dataSource() {
         return DataSourceBuilder.create()
@@ -90,39 +93,32 @@ public class BatchConfig {
         return factory.getObject();
     } */
 
+
+    @Bean
+    @StepScope
+    public TransactionProcessor transactionProcessor(@Value("#{jobParameters['processingDate']}") String processingDate) {
+        return new TransactionProcessor(processingDate);
+    }
+
+    @Bean
+    public TransactionWriter transactionWriter() {
+        return new TransactionWriter();
+    }
+
+
     @Bean(name = "transactionItemReader")
-    @StepScope //StepScope has to be with the Bean
-    public FlatFileItemReader<TransactionRecord> transactionReader(
-            @Value("#{jobParameters['inputFile']}")
-            String inputFile,
-            @Value("#{jobParameters['processingDate']}")
-            String processingDate
-    ) {
-
-        //Transfer String (processingDate parameter above) -> LocalDate (expectedDate)
-        LocalDate expectedDate = LocalDate.parse(processingDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-
+    @StepScope
+    public FlatFileItemReader<TransactionRecord> transactionReader(@Value("#{jobParameters['inputFile']}") String inputFile)
+    {
         FlatFileItemReader<TransactionRecord> reader = new FlatFileItemReader<>();
         reader.setResource(new ClassPathResource(inputFile));
         reader.setLinesToSkip(1);
 
         DelimitedLineTokenizer lineTokenizer = new DelimitedLineTokenizer();
         lineTokenizer.setNames(
-                "Batch_ID",
-                "Transaction_ID",
-                "Customer_ID",
-                "Account_Type",
-                "Total_Balance",
-                "Transaction_Amount",
-                "Updated_Balance",
-                "Investment_Amount",
-                "Investment_Type",
-                "Is_Anomaly",
-                "Transaction_Date",
-                "Year",
-                "Month",
-                "Day",
-                "Processed_At"
+                "Batch_ID", "Transaction_ID", "Customer_ID", "Account_Type", "Total_Balance",
+                "Transaction_Amount", "Updated_Balance", "Investment_Amount", "Investment_Type",
+                "Is_Anomaly", "Transaction_Date", "Year", "Month", "Day", "Processed_At"
         );
         lineTokenizer.setStrict(false);
 
@@ -131,25 +127,23 @@ public class BatchConfig {
 
         FieldSetMapper<TransactionRecord> fieldSetMapper = fieldSet -> {
 
-            LocalDate transactionDate = LocalDate.parse(fieldSet.readString("Transaction_Date"), transactionFormatter);
+            String dateString = fieldSet.readString("Transaction_Date").trim();
+            LocalDate transactionDate = LocalDate.parse(dateString, transactionFormatter);
 
-            if (!transactionDate.equals(expectedDate)) {
-                return null;
-            }
 
             TransactionRecord tr = new TransactionRecord();
             tr.setBatchId(fieldSet.readString("Batch_ID"));
             tr.setTransactionId(fieldSet.readLong("Transaction_ID"));
             tr.setCustomerId(fieldSet.readLong("Customer_ID"));
             tr.setAccountType(fieldSet.readString("Account_Type"));
-            tr.setTotalBalance(fieldSet.readBigDecimal("Total_Balance"));
-            tr.setTransactionAmount(fieldSet.readBigDecimal("Transaction_Amount"));
-            tr.setUpdatedBalance(fieldSet.readBigDecimal("Updated_Balance"));
-            tr.setInvestmentAmount(fieldSet.readBigDecimal("Investment_Amount"));
+            tr.setTotalBalance(fieldSet.readBigDecimal("Total_Balance").setScale(2, RoundingMode.HALF_UP));
+            tr.setTransactionAmount(fieldSet.readBigDecimal("Transaction_Amount").setScale(2, RoundingMode.HALF_UP));
+            tr.setUpdatedBalance(fieldSet.readBigDecimal("Updated_Balance").setScale(2, RoundingMode.HALF_UP));
+            tr.setInvestmentAmount(fieldSet.readBigDecimal("Investment_Amount").setScale(2, RoundingMode.HALF_UP));
             tr.setInvestmentType(fieldSet.readString("Investment_Type"));
             tr.setIsAnomaly(fieldSet.readInt("Is_Anomaly") == 1);
             tr.setTransactionDate(transactionDate);
-            tr.setProcessedAt(LocalDateTime.parse(fieldSet.readString("Processed_At"), processedFormatter));
+            tr.setProcessedAt(LocalDateTime.parse(fieldSet.readString("Processed_At").trim(), processedFormatter));
             tr.setYear(fieldSet.readInt("Year"));
             tr.setMonth(fieldSet.readInt("Month"));
             tr.setDay(fieldSet.readInt("Day"));
@@ -161,6 +155,7 @@ public class BatchConfig {
         lineMapper.setFieldSetMapper(fieldSetMapper);
 
         reader.setLineMapper(lineMapper);
+
         return reader;
     }
 
@@ -177,18 +172,19 @@ public class BatchConfig {
 
     @Bean
     public Step processTransactionStep(JobRepository jobRepository, PlatformTransactionManager txManager,
-                                       FlatFileItemReader<TransactionRecord> transactionReader
-                                       ) {
+                                       FlatFileItemReader<TransactionRecord> transactionReader,
+                                       TransactionProcessor transactionProcessor,
+                                       TransactionWriter transactionWriter
+    ) {
         return new StepBuilder("processOrdersStep", jobRepository)
                 .<TransactionRecord, TransactionRecord>chunk(1000, txManager)
                 .reader(transactionReader)
-                .processor(processor)
-                .writer(writer)
-                .taskExecutor(taskExecutor())
-                //Fault Tolerant Mode
+                .processor(transactionProcessor)
+                .writer(transactionWriter)
+                //.taskExecutor(taskExecutor())
                 .faultTolerant()
-                .skipLimit(200) //bo toi da 200 loi
-                .skip(Exception.class) //ngoai tru Exception thi khong ghi lai
+                .skipLimit(200)
+                .skip(Exception.class)
                 .listener(transactionSkipListener)
                 .build();
     }
@@ -204,18 +200,11 @@ public class BatchConfig {
     @Bean
     public DataSourceInitializer dataSourceInitializer(DataSource dataSource) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
-        // Sử dụng script chuẩn của Spring Batch cho Oracle
         populator.addScript(new ClassPathResource("org/springframework/batch/core/schema-oracle.sql"));
-
-        populator.setContinueOnError(true); //phòng khi bảng đã tồn tại
-
+        populator.setContinueOnError(true);
         DataSourceInitializer initializer = new DataSourceInitializer();
         initializer.setDataSource(dataSource);
         initializer.setDatabasePopulator(populator);
         return initializer;
     }
-
-
-
-
 }

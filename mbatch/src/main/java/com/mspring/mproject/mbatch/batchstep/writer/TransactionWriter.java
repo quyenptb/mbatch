@@ -2,7 +2,6 @@ package com.mspring.mproject.mbatch.batchstep.writer;
 import com.mspring.mproject.mbatch.model.entity.TransactionRecord;
 import com.mspring.mproject.mbatch.repository.TransactionRepository;
 
-import com.mspring.mproject.mbatch.repository.TransactionRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
@@ -13,9 +12,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-@Component
-
 public class TransactionWriter implements ItemWriter<TransactionRecord> {
+
 
     @Autowired
     @Lazy

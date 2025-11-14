@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Component
@@ -27,7 +29,7 @@ public class JobScheduler {
     //test
     @Scheduled(fixedRate = 30000) // 30.000 mili-seconds = 30 seconds
     public void runJobForTest() {
-        log.info("Scheduler: Triggering this job (test 30 s)...");
+        log.info("Scheduler: Triggering this job (5 minutes)...");
         runJob();
     }
 
@@ -41,7 +43,9 @@ public class JobScheduler {
     private void runJob() {
         try {
             JobParameters jobParameters = new JobParametersBuilder()
-                    .addString("processingDate", LocalDateTime.now().toString())
+                    .addString("processingDate", "2022-04-02") //LocalDate.now().toString()
+                    .addString("inputFile", "transaction_data.csv" )
+                    .addLong("run.id", System.currentTimeMillis())
                     .toJobParameters();
 
             jobLauncher.run(transactionJob, jobParameters);

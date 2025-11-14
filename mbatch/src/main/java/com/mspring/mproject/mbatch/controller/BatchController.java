@@ -33,8 +33,10 @@ public class BatchController {
     public String startJob() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
         try {
             JobParameters jobParameters = new JobParametersBuilder()
-                    .addString("processingDate", "2025-11-10")
-                    .addString("inputFile", "transaction_data.csv")
+                    .addLong("run.id", System.currentTimeMillis())
+                    .addString("processingDate", "2022-09-09") //LocalDate.now().toString()
+                    .addString("inputFile", "transaction_data.csv" )
+                    //.addString("inputFile", "transaction_data.csv")
                     .toJobParameters();
 
             jobLauncher.run(transactionJob, jobParameters);
@@ -46,8 +48,6 @@ public class BatchController {
             return "An error has occur " + e.getMessage();
 
         }
-
-
 
     }
 
