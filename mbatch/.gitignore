@@ -31,3 +31,24 @@ build/
 
 ### VS Code ###
 .vscode/
+
+application.properties
+!application.properties.example
+
+target/
+build/
+*.war
+*.jar
+
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+
+*.log
+*.csv
+
+.DS_Store
+Thumbs.db
